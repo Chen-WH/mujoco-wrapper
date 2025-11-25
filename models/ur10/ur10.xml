@@ -1,5 +1,6 @@
 <mujoco model="ur10">
   <compiler angle="radian" autolimits="true"/>
+  <option integrator="implicitfast" gravity="0 0 -9.81"/>
 
   <default>
     <default class="ur10">
@@ -64,5 +65,9 @@
     <general class="ur10" name="actuator5" joint="joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-56 56"/>
     <general class="ur10" name="actuator6" joint="joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-56 56"/>
   </actuator>
+
+  <keyframe>
+    <key name="home" qpos="0.0 -1.5708 0.0 -1.5708 0.0 0.0" ctrl="0.0 -1.5708 0.0 -1.5708 0.0 0.0"/>
+  </keyframe>
 
 </mujoco>

@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
-project(mujoco_wrappers)
+project(mujoco-wrapper)
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
 
 # Install targets
 install(PROGRAMS
-#  nodes/torque_mpc_publisher.py
+  node/position.py
 #  nodes/torque_publisher.py
 #  nodes/pd_publisher.py
   DESTINATION lib/${PROJECT_NAME}
