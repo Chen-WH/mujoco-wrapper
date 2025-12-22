@@ -2,7 +2,7 @@
 <package format="3">
   <name>mujoco-wrapper</name>
   <version>1.0.0</version>
-  <description>mujoco ros2 and gymnasium wrapper</description>
+  <description>MuJoCo ROS2 and Gymnasium wrapper</description>
   <maintainer email="Chen.WH@sjtu.edu.cn">ChenWH</maintainer>
   <license>MIT</license>
 
