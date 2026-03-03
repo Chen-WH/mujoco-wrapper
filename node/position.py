@@ -34,6 +34,8 @@ class MujocoNode(Node):
     self.counter = 0
     self.trajectory_received = False
     self.target_reached = False
+    self.trajectory_dt = 0.008
+    self.trajectory_hold_steps = 1
     self.position_command = self.position_target
     self.velocity_command = [0.0] * self.n
     self.torque_command = [0.0] * self.n
@@ -62,6 +64,7 @@ class MujocoNode(Node):
   def MujocoSim(self):
     model = mujoco.MjModel.from_xml_path(self.xml_file)
     data = mujoco.MjData(model)
+    self.trajectory_hold_steps = max(1, int(round(self.trajectory_dt / model.opt.timestep)))
     with mujoco.viewer.launch_passive(model, data, key_callback=self.key_callback) as viewer:
       while 1:
         step_start = time.time()
@@ -82,20 +85,19 @@ class MujocoNode(Node):
           self.target_reached = True
 
         if self.trajectory_received and not self.target_reached:
-          if self.counter == 0:
-            if self.current_trajectory_index < len(self.trajectory.points):
-              point_command = self.trajectory.points[self.current_trajectory_index]
-              self.position_command = point_command.positions
-              self.velocity_command = point_command.velocities
-              self.torque_command = point_command.effort
+          if self.current_trajectory_index < len(self.trajectory.points):
+            point_command = self.trajectory.points[self.current_trajectory_index]
+            self.position_command = point_command.positions
+            self.velocity_command = point_command.velocities
+            self.torque_command = point_command.effort
 
-              data.ctrl[:] = self.position_command
-              self.counter += 1
-              if self.counter >= 4:
-                self.current_trajectory_index += 1
-                self.counter -= 4
-            else:
-              raise RuntimeError("New trajectory not received")
+            data.ctrl[:] = self.position_command
+            self.counter += 1
+            if self.counter >= self.trajectory_hold_steps:
+              self.current_trajectory_index += 1
+              self.counter -= self.trajectory_hold_steps
+          else:
+            raise RuntimeError("New trajectory not received")
         else:
           data.ctrl[:] = self.position_target
 

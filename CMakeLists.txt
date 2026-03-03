@@ -7,6 +7,9 @@ find_package(ament_cmake REQUIRED)
 # Install targets
 install(PROGRAMS
   node/position.py
+  node/mocap_teleop.py
+  node/collision_teleop.py
+  node/joint_command_executor.py
   test/imu_test.py
   test/teleop_test.py
   DESTINATION lib/${PROJECT_NAME}
