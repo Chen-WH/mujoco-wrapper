@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import time
-from typing import List
+from typing import List, Optional, Tuple
 
 import mujoco
 import mujoco.viewer
@@ -40,13 +40,12 @@ class MujocoJointExecutor(Node):
         self.publish_joint_state = self.create_publisher(JointState, self.joint_state_topic, 20)
         self.create_subscription(JointTrajectory, self.command_topic, self.trajectory_callback, 10)
 
-        self.trajectory: List[np.ndarray] = []
-        self.trajectory_index = 0
+        self.trajectory: List[Tuple[float, np.ndarray]] = []
+        self.trajectory_start_time: Optional[float] = None
         self.default_target = np.array([0.0, -np.pi / 2, 0.0, -np.pi / 2, 0.0, 0.0], dtype=float)
         self.position_target = self.default_target.copy()
 
         self.paused = False
-        self.new_trajectory_received = False
 
         self.get_logger().info(
             f"MuJoCo executor ready. model={self.xml_file}, cmd={self.command_topic}, state={self.joint_state_topic}"
@@ -57,20 +56,48 @@ class MujocoJointExecutor(Node):
             self.get_logger().warn('Received empty trajectory, ignored.')
             return
 
-        new_traj: List[np.ndarray] = []
+        new_traj: List[Tuple[float, np.ndarray]] = []
         for point in msg.points:
             if len(point.positions) < self.n:
                 continue
-            new_traj.append(np.asarray(point.positions[: self.n], dtype=float))
+            point_time = float(point.time_from_start.sec) + float(point.time_from_start.nanosec) * 1e-9
+            new_traj.append((point_time, np.asarray(point.positions[: self.n], dtype=float)))
 
         if not new_traj:
             self.get_logger().warn('Received trajectory without valid positions, ignored.')
             return
 
+        new_traj.sort(key=lambda item: item[0])
         self.trajectory = new_traj
-        self.trajectory_index = 0
-        self.new_trajectory_received = True
-        self.get_logger().info(f'Received /joint_commands with {len(self.trajectory)} points. Replanning execution queue reset.')
+        self.trajectory_start_time = time.monotonic()
+        self.position_target = self.trajectory[0][1].copy()
+        duration = self.trajectory[-1][0]
+        self.get_logger().info(
+            f'Received /joint_commands with {len(self.trajectory)} points over {duration:.3f}s. '
+            'Execution restarted from trajectory start time.'
+        )
+
+    def sample_trajectory(self, elapsed: float) -> np.ndarray:
+        if not self.trajectory:
+            return self.default_target
+
+        if elapsed <= self.trajectory[0][0]:
+            return self.trajectory[0][1]
+
+        if elapsed >= self.trajectory[-1][0]:
+            return self.trajectory[-1][1]
+
+        for idx in range(1, len(self.trajectory)):
+            t1, q1 = self.trajectory[idx]
+            if elapsed <= t1:
+                t0, q0 = self.trajectory[idx - 1]
+                dt = t1 - t0
+                if dt <= 1e-9:
+                    return q1
+                alpha = (elapsed - t0) / dt
+                return (1.0 - alpha) * q0 + alpha * q1
+
+        return self.trajectory[-1][1]
 
     def key_callback(self, keycode: int) -> None:
         if chr(keycode) == ' ':
@@ -87,17 +114,9 @@ class MujocoJointExecutor(Node):
             while rclpy.ok():
                 step_start = time.time()
 
-                if self.new_trajectory_received:
-                    self.new_trajectory_received = False
-
-                if self.trajectory and self.trajectory_index < len(self.trajectory):
-                    self.position_target = self.trajectory[self.trajectory_index]
-
-                    error = float(np.sum(np.abs(np.asarray(data.qpos[: self.n]) - self.position_target)))
-                    if error < self.position_tolerance:
-                        self.trajectory_index += 1
-                elif self.trajectory:
-                    self.position_target = self.trajectory[-1]
+                if self.trajectory and self.trajectory_start_time is not None:
+                    elapsed = time.monotonic() - self.trajectory_start_time
+                    self.position_target = self.sample_trajectory(elapsed)
                 else:
                     self.position_target = self.default_target
 
