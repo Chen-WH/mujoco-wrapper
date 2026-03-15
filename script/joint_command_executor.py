@@ -20,12 +20,13 @@ class MujocoJointExecutor(Node):
         self.command_topic = self.declare_parameter('command_topic', '/joint_commands').value
         self.joint_state_topic = self.declare_parameter('joint_state_topic', '/joint_states').value
         self.position_tolerance = float(self.declare_parameter('position_tolerance', 1e-2).value)
+        self.xml_file_param = str(self.declare_parameter('xml_file', '').value)
 
         if self.robot != 'ur':
             raise ValueError("Only robot='ur' is currently supported in this executor.")
 
         package_share = get_package_share_directory('mujoco-wrapper')
-        self.xml_file = f"{package_share}/models/ur10/scene.xml"
+        self.xml_file = self.xml_file_param or f"{package_share}/models/ur10/scene.xml"
 
         self.joint_names = [
             'shoulder_pan_joint',
