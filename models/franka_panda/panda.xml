@@ -9,7 +9,7 @@
     <default class="panda">
       <material specular="0.5" shininess="0.25"/>
       <joint armature="0.1" damping="1" axis="0 0 1" range="-2.8973 2.8973"/>
-      <!-- <general dyntype="none" biastype="affine" ctrlrange="-2.8973 2.8973" forcerange="-87 87"/> -->
+      <general gaintype="fixed" biastype="none" gainprm="1" ctrlrange="-87 87" forcerange="-87 87"/>
 
       <default class="finger">
         <joint axis="0 1 0" type="slide" range="0 0.04"/>
@@ -265,23 +265,16 @@
   </equality>
 
   <actuator>
-    <motor class="panda" name="actuator1" joint="joint1" forcerange="-87 87"/>
-    <motor class="panda" name="actuator2" joint="joint2" forcerange="-87 87"/>
-    <motor class="panda" name="actuator3" joint="joint3" forcerange="-87 87"/>
-    <motor class="panda" name="actuator4" joint="joint4" forcerange="-87 87"/>
-    <motor class="panda" name="actuator5" joint="joint5" forcerange="-12 12"/>
-    <motor class="panda" name="actuator6" joint="joint6" forcerange="-12 12"/>
-    <motor class="panda" name="actuator7" joint="joint7" forcerange="-12 12"/>
+    <general class="panda" name="actuator1" joint="joint1" ctrlrange="-87 87" forcerange="-87 87"/>
+    <general class="panda" name="actuator2" joint="joint2" ctrlrange="-87 87" forcerange="-87 87"/>
+    <general class="panda" name="actuator3" joint="joint3" ctrlrange="-87 87" forcerange="-87 87"/>
+    <general class="panda" name="actuator4" joint="joint4" ctrlrange="-87 87" forcerange="-87 87"/>
+    <general class="panda" name="actuator5" joint="joint5" ctrlrange="-12 12" forcerange="-12 12"/>
+    <general class="panda" name="actuator6" joint="joint6" ctrlrange="-12 12" forcerange="-12 12"/>
+    <general class="panda" name="actuator7" joint="joint7" ctrlrange="-12 12" forcerange="-12 12"/>
 
     <!-- <general class="panda" name="actuator8" tendon="split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10" dyntype="none" biastype="affine" gaintype="fixed"/> -->
 
-    <!-- <general class="panda" name="actuator1" joint="joint1" gainprm="4500" biasprm="0 -4500 -450"/> -->
-    <!-- <general class="panda" name="actuator2" joint="joint2" gainprm="4500" biasprm="0 -4500 -450" ctrlrange="-1.7628 1.7628"/> -->
-    <!-- <general class="panda" name="actuator3" joint="joint3" gainprm="3500" biasprm="0 -3500 -350"/> -->
-    <!-- <general class="panda" name="actuator4" joint="joint4" gainprm="3500" biasprm="0 -3500 -350" ctrlrange="-3.0718 -0.0698"/> -->
-    <!-- <general class="panda" name="actuator5" joint="joint5" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12"/> -->
-    <!-- <general class="panda" name="actuator6" joint="joint6" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12" ctrlrange="-0.0175 3.7525"/> -->
-    <!-- <general class="panda" name="actuator7" joint="joint7" gainprm="2000" biasprm="0 -2000 -200" forcerange="-12 12"/> -->
     <!-- Remap original ctrlrange (0, 0.04) to (0, 255): 0.04 * 100 / 255 = 0.01568627451 -->
     <!-- <general class="panda" name="actuator8" tendon="split" forcerange="-100 100" ctrlrange="0 255" gainprm="0.01568627451 0 0" biasprm="0 -100 -10"/> -->
   </actuator>
