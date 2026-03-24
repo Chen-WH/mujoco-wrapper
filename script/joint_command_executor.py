@@ -67,8 +67,10 @@ ROBOT_CONFIGS: Dict[str, RobotConfig] = {
         actuator_names=['actuator1', 'actuator2', 'actuator3', 'actuator4', 'actuator5', 'actuator6', 'actuator7'],
         default_target=np.zeros(7, dtype=float),
         control_mode='impedance_torque',
-        kp=_array([160.0, 160.0, 140.0, 120.0, 60.0, 40.0, 30.0]),
-        kd=_array([28.0, 28.0, 24.0, 20.0, 12.0, 8.0, 6.0]),
+        #kp=_array([450.0, 450.0, 350.0, 350.0, 200.0, 200.0, 200.0]),
+        #kd=_array([45.0, 45.0, 35.0, 35.0, 20.0, 20.0, 20.0]),
+        kp=_array([4500.0, 4500.0, 3500.0, 3500.0, 2000.0, 2000.0, 2000.0]),
+        kd=_array([ 450.0,  450.0,  350.0,  350.0,  200.0,  200.0,  200.0]),
         effort_limit=_array([87.0, 87.0, 87.0, 87.0, 12.0, 12.0, 12.0]),
     ),
     'leap_left': RobotConfig(
@@ -255,12 +257,13 @@ class MujocoJointExecutor(Node):
             return
 
         if self.config.control_mode == 'impedance_torque':
-            if np.any(np.abs(self.effort_target) > 1e-9):
-                tau = self.effort_target.copy()
-            else:
-                q = self._joint_vector_from_data(data, self.qpos_addrs, data.qpos)
-                dq = self._joint_vector_from_data(data, self.qvel_addrs, data.qvel)
-                tau = self.config.kp * (self.position_target - q) + self.config.kd * (self.velocity_target - dq)
+            q = self._joint_vector_from_data(data, self.qpos_addrs, data.qpos)
+            dq = self._joint_vector_from_data(data, self.qvel_addrs, data.qvel)
+            tau = (
+                self.config.kp * (self.position_target - q)
+                + self.config.kd * (self.velocity_target - dq)
+            #    + self.effort_target
+            )
             tau = np.clip(tau, -self.config.effort_limit, self.config.effort_limit)
             for ctrl_idx, torque in zip(self.ctrl_addrs, tau):
                 data.ctrl[ctrl_idx] = float(torque)
