@@ -111,6 +111,14 @@ class MujocoJointExecutor(Node):
         self.joint_state_topic = self.declare_parameter('joint_state_topic', '/joint_states').value
         self.position_tolerance = float(self.declare_parameter('position_tolerance', 1e-2).value)
         self.xml_file_param = str(self.declare_parameter('xml_file', '').value)
+        self.mass_scale = float(self.declare_parameter('mass_scale', 1.0).value)
+        self.payload_mass = float(self.declare_parameter('payload_mass', 0.0).value)
+        self.payload_body_name = str(self.declare_parameter('payload_body_name', 'attachment').value)
+        self.payload_com = np.asarray(
+            self.declare_parameter('payload_com', [0.0, 0.0, 0.05]).value, dtype=float
+        )
+        if self.payload_com.shape != (3,):
+            raise ValueError('payload_com must contain exactly 3 values.')
 
         package_share = get_package_share_directory('mujoco-wrapper')
         self.xml_file = self.xml_file_param or f"{package_share}/{self.config.scene_relative_path}"
@@ -137,8 +145,47 @@ class MujocoJointExecutor(Node):
 
         self.get_logger().info(
             f"MuJoCo executor ready. robot={self.robot}, mode={self.config.control_mode}, "
-            f"model={self.xml_file}, cmd={self.command_topic}, state={self.joint_state_topic}"
+            f"model={self.xml_file}, cmd={self.command_topic}, state={self.joint_state_topic}, "
+            f"mass_scale={self.mass_scale:.3f}, payload_mass={self.payload_mass:.3f}"
         )
+
+    def _lookup_body_id(self, model: mujoco.MjModel, body_name: str) -> int:
+        body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, body_name)
+        if body_id < 0:
+            raise ValueError(f"Body '{body_name}' not found in {self.xml_file}")
+        return int(body_id)
+
+    def _apply_runtime_model_variations(self, model: mujoco.MjModel, data: mujoco.MjData) -> None:
+        dirty = False
+
+        if self.robot == 'ur' and abs(self.mass_scale - 1.0) > 1e-9:
+            for body_name in [
+                'shoulder_link',
+                'upper_arm_link',
+                'forearm_link',
+                'wrist_1_link',
+                'wrist_2_link',
+                'wrist_3_link',
+            ]:
+                body_id = self._lookup_body_id(model, body_name)
+                model.body_mass[body_id] *= self.mass_scale
+                model.body_inertia[body_id] *= self.mass_scale
+            dirty = True
+            self.get_logger().info(f'Applied UR10 mass/inertia scale {self.mass_scale:.3f} to MuJoCo plant.')
+
+        if self.payload_mass > 0.0:
+            body_id = self._lookup_body_id(model, self.payload_body_name)
+            model.body_mass[body_id] = self.payload_mass
+            model.body_inertia[body_id] = np.full(3, max(1e-6, 1e-6 * self.payload_mass), dtype=float)
+            model.body_ipos[body_id] = self.payload_com
+            dirty = True
+            self.get_logger().info(
+                f"Attached payload mass={self.payload_mass:.3f}kg com={self.payload_com.tolist()} "
+                f"to body '{self.payload_body_name}'."
+            )
+
+        if dirty:
+            mujoco.mj_setConst(model, data)
 
     def _lookup_joint_addresses(self, model: mujoco.MjModel) -> None:
         self.qpos_addrs = []
@@ -274,6 +321,7 @@ class MujocoJointExecutor(Node):
     def run(self) -> None:
         model = mujoco.MjModel.from_xml_path(self.xml_file)
         data = mujoco.MjData(model)
+        self._apply_runtime_model_variations(model, data)
         self._lookup_joint_addresses(model)
 
         for qpos_idx, target in zip(self.qpos_addrs, self.default_target):
@@ -330,7 +378,8 @@ def main() -> None:
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':
