@@ -21,7 +21,7 @@
   </asset>
 
   <worldbody>
-    <body name="link0" childclass="ur10">
+    <body name="link0" childclass="ur10" pos="0 0 0.96">
       <geom quat="-1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="base"/>
       <body name="shoulder_link" pos="0 0 0.1273" quat="0 0 0 1">
         <inertial pos="0.021 -0.027 0" quat="0.988634 -0.000680926 0.148578 -0.0229591" mass="7.1" diaginertia="0.0353866 0.0352903 0.0202532"/>
